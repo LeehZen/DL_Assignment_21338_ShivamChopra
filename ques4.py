@@ -4,11 +4,15 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torchvision import datasets, transforms, models
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
+
+# supress warnings
+import warnings
+warnings.filterwarnings("ignore")
 
 
 ## load dataset
-dataset = datasets.SVHN(
+full_dataset = datasets.SVHN(
     root =  "./data",
     download = True, 
     split = "train", 
@@ -18,55 +22,116 @@ dataset = datasets.SVHN(
     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Normalize images
     ]))
 
+subset_indices = np.random.choice(len(full_dataset), size=int(0.25*len(full_dataset)), replace=False)
+dataset = Subset(full_dataset, subset_indices)
+
 train_loader = DataLoader(dataset, batch_size = 32, shuffle = True)
 
 
 ## import other models
 model  = models.resnet18(pretrained = True)
 
-num_classes = 10 # SVHN has 10 classifications
-model.fc = nn.Linear(model.fc.in_features, num_classes)
+# num_classes = 10 # SVHN has 10 classifications
+# model.fc = nn.Linear(model.fc.in_features, num_classes)
 
-# freeze layers' parameters
-for param in model.parameters():
-    param.requires_grad = False
-for param in model.fc.parameters():
-    param.requires_grad = True
+# # freeze layers' parameters
+# for param in model.parameters():
+#     param.requires_grad = False
+# for param in model.fc.parameters():
+#     param.requires_grad = True
 
-# loss fn and optimizer
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(model.fc.parameters(), lr=0.01, momentum=0.9)
+# # loss fn and optimizer
+# criterion = nn.CrossEntropyLoss()
+# optimizer = optim.SGD(model.fc.parameters(), lr=0.01, momentum=0.9)
 
-# train the model
-num_epochs = 5
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = model.to(device)
-model.train()
+# # train the model
+# num_epochs = 5
+# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# model = model.to(device)
+# model.train()
 
-for epoch in range(num_epochs):
-    for images, labels in train_loader:
-        images, labels = images.to(device), labels.to(device)
-        optimizer.zero_grad()
-        outputs = model(images)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
+# for epoch in range(num_epochs):
+#     for images, labels in train_loader:
+#         images, labels = images.to(device), labels.to(device)
+#         optimizer.zero_grad()
+#         outputs = model(images)
+#         loss = criterion(outputs, labels)
+#         loss.backward()
+#         optimizer.step()
 
-## get results on present data
-# evaluation
-model.eval()
+# ## get results on present data
+# # evaluation
+# model.eval()
 
-correct = 0 # correct predictions
-total = 0 # totalpredictions
+# correct = 0 # correct predictions
+# total = 0 # totalpredictions
 
-with torch.no_grad():
-    for images, labels in train_loader:
-        images, labels = images.to(device), labels.to(device)
-        outputs = model(images)
-        _, predicted =  torch.max(outputs.data, 1)
-        total += labels.size(0)
-        correct += (predicted == labels).sum().item()
+# with torch.no_grad():
+#     for images, labels in train_loader:
+#         images, labels = images.to(device), labels.to(device)
+#         outputs = model(images)
+#         _, predicted =  torch.max(outputs.data, 1)
+#         total += labels.size(0)
+#         correct += (predicted == labels).sum().item()
 
-accuracy = correct/total
+# accuracy = correct/total
 
-print("Accuracy of resnet18 model:", accuracy)
+# print("Accuracy of resnet18 model:", accuracy)
+
+
+# model_resnet50 = models.vgg16(pretrained = True)
+
+model_names = ["resnet18", "resnet50", "resnet101"]#, "alexnet", "googlenet", "vgg16"]
+
+for name in model_names:
+    # print(name)
+    model = getattr(models, name)(pretrained=True)
+    # print(model)
+
+
+    num_classes = 10 # SVHN has 10 classifications
+    model.fc = nn.Linear(model.fc.in_features, num_classes)
+
+    # freeze layers' parameters
+    for param in model.parameters():
+        param.requires_grad = False
+    for param in model.fc.parameters():
+        param.requires_grad = True
+
+    # loss fn and optimizer
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.SGD(model.fc.parameters(), lr=0.01, momentum=0.9)
+
+    # train the model
+    num_epochs = 5
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = model.to(device)
+    model.train()
+
+    for epoch in range(num_epochs):
+        for images, labels in train_loader:
+            images, labels = images.to(device), labels.to(device)
+            optimizer.zero_grad()
+            outputs = model(images)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+
+    ## get results on present data
+    # evaluation
+    model.eval()
+
+    correct = 0 # correct predictions
+    total = 0 # totalpredictions
+
+    with torch.no_grad():
+        for images, labels in train_loader:
+            images, labels = images.to(device), labels.to(device)
+            outputs = model(images)
+            _, predicted =  torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+
+    accuracy = correct/total
+
+    print("Accuracy of {name} model:", accuracy)

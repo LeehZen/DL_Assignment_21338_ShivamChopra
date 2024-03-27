@@ -29,18 +29,35 @@ x_test = x_test.reshape(-1, height*width)
 y_train = to_categorical(y_train)
 y_test = to_categorical(y_test)
 
-# Model
-dense_model = Sequential([
-    Dense(128, activation = 'relu', input_shape = (height*width,)),
-    Dense(64, activation = 'relu'),
-    Dense(10, activation = 'softmax')
-])
+# hyperparameters
+activations = ['relu', 'tanh']
+layer1 = [128, 512, 1024]
+layer2 = [32, 64, 128]
 
-#compiling the model
-dense_model.compile(optimizer = Adam(), loss = 'categorical_crossentropy', metrics = ['accuracy'])
+for activation in activations:
+    for i in layer1:
+        for j in layer2:
 
-# training the model
-dense_model.fit(x_train, y_train, validation_data = (x_test, y_test), epochs = 10, batch_size = 128)
+            # Model
+            dense_model = Sequential([
+                Dense(128, activation = 'relu', input_shape = (height*width,)),
+                Dense(64, activation = 'relu'),
+                Dense(10, activation = 'softmax')
+            ])
+
+            #compiling the model
+            dense_model.compile(optimizer = Adam(), loss = 'categorical_crossentropy', metrics = ['accuracy'])
+
+            # training the model
+            dense_model.fit(x_train, y_train, validation_data = (x_test, y_test), epochs = 10, batch_size = 128)
+
+            # evaluation 
+            loss,accuracy = dense_model.evaluate(x_test, y_test)
+
+            print("Activation:", activation)
+            print("layer1 blocks:", i)
+            print("layer2 blocks:", j)
+            print("Loss: ",loss,"\nAccuracy:", accuracy)
 
 # evaluation 
 loss,accuracy = dense_model.evaluate(x_test, y_test)
